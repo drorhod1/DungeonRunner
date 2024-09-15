@@ -6,6 +6,7 @@ local start_nmd = true
 local objective_index = 1
 local current_objective = nil
 local prisoner_actor = nil
+local kill_count = 0
 
 local ignored_objectives = {}
 
@@ -14,9 +15,12 @@ local dungeon_state = {
     EXPLORE = "EXPLORE",
     COLLECT_MOTE = "COLLECT_MOTE",
     KILL_ELITE = "KILL_ELITE",
+    KILL_TARGET = "KILL_TARGET",
     DEPOSIT_MOTE = "DEPOSITE_MOTE",
     SAVE_PRISONER = "SAVE_PRISONER",
     WAIT_PRISONER_VFX = "WAIT_PRISONER_VFX",
+    MOVE_TO_BOSS_SPHERE = "MOVE_TO_BOSS_SPHERE",
+    KILL_BOSS = "KILL_BOSS",
     FINISHED = "FINISHED",
 }
 
@@ -45,6 +49,17 @@ function is_door_unlocked()
         end
     end
     return true
+end
+
+function get_actor(name)
+    local actors = actors_manager:get_all_actors()
+    for _, actor in pairs(actors) do
+        local skin = actor:get_skin_name()
+        if skin:match(name) then
+            return actor
+        end
+    end
+    return nil
 end
 
 function get_mote_actor()
@@ -97,6 +112,17 @@ function get_elite_actor()
     return nil
 end
 
+function get_boss_sphere()
+    local actors = actors_manager:get_all_actors()
+    for _, actor in pairs(actors) do
+        local name = actor:get_skin_name()
+        if name:match("DRLG_Generic_Boss_Trigger_Sphere") then
+            return actor
+        end
+    end
+    return nil
+end
+
 local task  = {
     name = "Explore",
     current_state = dungeon_state.INIT,
@@ -122,12 +148,18 @@ local task  = {
             self:collect_mote()
         elseif self.current_state == dungeon_state.KILL_ELITE then
             self:kill_elite()
+        elseif self.current_state == dungeon_state.KILL_TARGET then
+            self:kill_target()
         elseif self.current_state == dungeon_state.DEPOSIT_MOTE then
             self:deposit_mote()
         elseif self.current_state == dungeon_state.SAVE_PRISONER then
             self:save_prisoner()
         elseif self.current_state == dungeon_state.WAIT_PRISONER_VFX then
             self:wait_prisoner_vfx()
+        elseif self.current_state == dungeon_state.MOVE_TO_BOSS_SPHERE then
+            self:move_to_boss_sphere()
+        elseif self.current_state == dungeon_state.KILL_BOSS then
+            self:kill_boss()
         elseif self.current_state == dungeon_state.FINISHED then
             self:finished()
         end
@@ -144,6 +176,7 @@ local task  = {
             self.current_state = dungeon_state.FINISHED
             return
         end
+
         if current_objective == "animus" then
             if get_mote_actor() then
                 explorer:clear_path_and_target()
@@ -178,6 +211,28 @@ local task  = {
                     end
                 end
             end
+        elseif current_objective == "kill" then
+            target_name = dungeon_objectives[self.zone][current_objective].name
+            local count = dungeon_objectives[self.zone][current_objective].count
+            console.print("count: " .. tostring(count))
+            console.print("kill_count: " .. tostring(kill_count))
+            if kill_count == count then
+                objective_index = objective_index + 1
+                current_objective = dungeon_objectives[self.zone].objectives[objective_index]
+                return
+            end
+            if get_actor(target_name) then
+                explorer:clear_path_and_target()
+                self.current_state = dungeon_state.KILL_TARGET
+                return
+            end
+        elseif current_objective == "boss_sphere" then
+            target_name = dungeon_objectives[self.zone][current_objective].name
+            if get_boss_sphere() then
+                explorer:clear_path_and_target()
+                self.current_state = dungeon_state.MOVE_TO_BOSS_SPHERE
+                return
+            end
         end
         explorer:move_to_target()
     end,
@@ -204,6 +259,20 @@ local task  = {
                 return
             end
         else
+            self.current_state = dungeon_state.EXPLORE
+        end
+    end,
+
+    kill_target = function(self)
+        local target = get_actor(target_name)
+        if target then
+            if utils.distance_to(target) > 2 then
+                console.print("Found target monster! Going to target!")
+                bomb_to(target:get_position())
+                return
+            end
+        else
+            kill_count = kill_count + 1
             self.current_state = dungeon_state.EXPLORE
         end
     end,
@@ -275,6 +344,32 @@ local task  = {
             return
         else
             interact_object(prisoner)
+        end
+    end,
+
+    move_to_boss_sphere = function(self)
+        local boss_sphere = get_boss_sphere()
+        if boss_sphere then
+            if utils.distance_to(boss_sphere) > 2 then
+                bomb_to(boss_sphere:get_position())
+                return
+            end
+        else
+            self.current_state = dungeon_state.KILL_BOSS
+        end
+    end,
+
+    kill_boss = function(self)
+        console.print("kill boss")
+        local target = get_actor(target_name)
+        if target then
+            if utils.distance_to(target) > 2 then
+                console.print("Found boss! Going to boss!")
+                bomb_to(target:get_position())
+                return
+            end
+        else
+            self.current_state = dungeon_state.EXPLORE
         end
     end,
 
