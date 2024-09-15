@@ -362,7 +362,8 @@ local task  = {
     kill_boss = function(self)
         console.print("kill boss")
         local target = get_actor(target_name)
-        if target then
+        local health = target:get_current_health()
+        if target and health > 1 then
             if utils.distance_to(target) > 2 then
                 console.print("Found boss! Going to boss!")
                 bomb_to(target:get_position())
