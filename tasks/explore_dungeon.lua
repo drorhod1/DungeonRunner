@@ -103,7 +103,7 @@ local task  = {
     zone = nil,
     waiting_vfx = 0,
     failed_attempts = 0,
-    max_attempts = 10,
+    max_attempts = 20,
     shouldExecute = function()
         return true
     end,
@@ -170,7 +170,7 @@ local task  = {
                     self.current_state = dungeon_state.SAVE_PRISONER
                     return
                 elseif ignored_pos then
-                    -- console.print('in ignore list')
+                    console.print('in ignore list')
                     if utils.distance_to(ignored_pos) ~= utils.distance_to(prisoner_pos) then
                         explorer:clear_path_and_target()
                         self.current_state = dungeon_state.SAVE_PRISONER
