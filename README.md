@@ -21,4 +21,4 @@ Current Features
 
 - Can get stuck from random treasure chest
 - Explorer can ended up walking backwards and become funny
-- Approximately 90% chance of completing the dungeon
+- Approximately 60% chance of completing the Dead Man's Dredge (heh was too optimistic)
