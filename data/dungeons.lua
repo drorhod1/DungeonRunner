@@ -6,6 +6,12 @@ local dungeons = {
             "prisoners"
         }
     },
+    DGN_Hawe_MaugansWorks = {
+        quest_id = 702108,
+        objectives = {
+            "prisoners"
+        }
+    },
     DGN_Scos_SaratsLair = {
         quest_id = 433938,
         objectives = {

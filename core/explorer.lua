@@ -547,7 +547,7 @@ local function move_to_target()
             end
         end
 
-        local next_point = current_path[path_index]
+        local next_point = current_path[path_index +1]
         
         if next_point and not next_point:is_zero() then
             pathfinder.request_move(next_point)
