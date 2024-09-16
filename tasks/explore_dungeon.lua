@@ -6,7 +6,6 @@ local start_nmd = true
 local objective_index = 1
 local current_objective = nil
 local prisoner_actor = nil
-local door_actor
 local kill_count = 0
 
 local ignored_objectives = {}
@@ -14,14 +13,12 @@ local ignored_objectives = {}
 local dungeon_state = {
     INIT = "INIT",
     EXPLORE = "EXPLORE",
-    DOOR_OPEN = "DOOR_OPEN",
     COLLECT_MOTE = "COLLECT_MOTE",
     KILL_ELITE = "KILL_ELITE",
     KILL_TARGET = "KILL_TARGET",
     DEPOSIT_MOTE = "DEPOSITE_MOTE",
     SAVE_PRISONER = "SAVE_PRISONER",
     WAIT_PRISONER_VFX = "WAIT_PRISONER_VFX",
-    WAIT_DOOR_VFX = "WAIT_PRISONER_VFX",
     MOVE_TO_BOSS_SPHERE = "MOVE_TO_BOSS_SPHERE",
     KILL_BOSS = "KILL_BOSS",
     FINISHED = "FINISHED",
@@ -43,16 +40,6 @@ function bomb_to(pos)
     explorer:move_to_target()
 end
 
-function is_door_unlocked()
-    local actors = actors_manager:get_ally_actors()
-    for _, actor in pairs(actors) do
-        local name = actor:get_skin_name()
-        if name:match("barrierWall_blood") then
-            return false
-        end
-    end
-    return true
-end
 
 function get_actor(name)
     local actors = actors_manager:get_all_actors()
@@ -92,16 +79,6 @@ function get_prisoner_actor()
     for _, actor in pairs(actors) do
         local name = actor:get_skin_name()
         if name:match("DGN_Standard_Global_Human_Stake") or name:match("DGN_Standard_Sitting_Skeleton") then
-            return actor
-        end
-    end
-    return nil
-end
-function get_door_actor()
-    local actors = actors_manager:get_all_actors()
-    for _, actor in pairs(actors) do
-        local name = actor:get_skin_name()
-        if name:match("ProtoDun_Door") then
             return actor
         end
     end
@@ -167,8 +144,6 @@ local task  = {
             self:deposit_mote()
         elseif self.current_state == dungeon_state.SAVE_PRISONER then
             self:save_prisoner()
-        elseif self.current_state == dungeon_state.DOOR_OPEN then
-            self:open_door()
         elseif self.current_state == dungeon_state.WAIT_PRISONER_VFX then
             self:wait_prisoner_vfx()
         elseif self.current_state == dungeon_state.MOVE_TO_BOSS_SPHERE then
@@ -194,25 +169,8 @@ local task  = {
             self.current_state = dungeon_state.FINISHED
             return
         end
-        local door = get_door_actor()
-        door_actor = door
-        if door then
-            local door_name = door:get_skin_name()
-                local door_pos = door:get_position()
-                local ignored_pos = ignored_objectives[door_name]
-                if not ignored_pos then
-                    explorer:clear_path_and_target()
-                    self.current_state = dungeon_state.DOOR_OPEN
-                    return
-                elseif ignored_pos then
-                    console.print('in ignore list')
-                    if utils.distance_to(ignored_pos) ~= utils.distance_to(prisoner_pos) then
-                        explorer:clear_path_and_target()
-                        self.current_state = dungeon_state.DOOR_OPEN
-                        return
-                    end
-                end
-            elseif current_objective == "animus" then
+        
+            if current_objective == "animus" then
             if get_mote_actor() then
                 explorer:clear_path_and_target()
                 self.current_state = dungeon_state.COLLECT_MOTE
